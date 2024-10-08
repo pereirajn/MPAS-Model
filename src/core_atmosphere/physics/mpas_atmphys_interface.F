@@ -101,6 +101,7 @@
  if(.not.allocated(th_p)   ) allocate(th_p(ims:ime,kms:kme,jms:jme)   )
  if(.not.allocated(al_p)   ) allocate(al_p(ims:ime,kms:kme,jms:jme)   )
  if(.not.allocated(rho_p)  ) allocate(rho_p(ims:ime,kms:kme,jms:jme)  )
+ if(.not.allocated(rho_zz_p)  ) allocate(rho_zz_p(ims:ime,kms:kme,jms:jme)  ) !JNP
  if(.not.allocated(rh_p)   ) allocate(rh_p(ims:ime,kms:kme,jms:jme)   )
  if(.not.allocated(znu_p)  ) allocate(znu_p(ims:ime,kms:kme,jms:jme)  )
 
@@ -175,7 +176,8 @@
  if(allocated(t_p)     ) deallocate(t_p     )
  if(allocated(th_p)    ) deallocate(th_p    )
  if(allocated(al_p)    ) deallocate(al_p    )
- if(allocated(rho_p)   ) deallocate(rho_p   ) 
+ if(allocated(rho_p)   ) deallocate(rho_p   )
+ if(allocated(rho_zz_p)   ) deallocate(rho_zz_p   )  !JNP
  if(allocated(rh_p)    ) deallocate(rh_p    ) 
  if(allocated(znu_p)   ) deallocate(znu_p   )
 
@@ -326,6 +328,7 @@
     v_p(i,k,j) = v(k,i)
 
     zz_p(i,k,j)  = zz(k,i)
+    rho_zz_p(i,k,j) = rho_zz(k,i) !JNP
     rho_p(i,k,j) = zz(k,i) * rho_zz(k,i)
     rho_p(i,k,j) = rho_p(i,k,j)*(1._RKIND + qv_p(i,k,j))
     th_p(i,k,j)  = theta_m(k,i) / (1._RKIND + R_v/R_d * qv_p(i,k,j))

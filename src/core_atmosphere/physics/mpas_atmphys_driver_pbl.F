@@ -803,7 +803,7 @@
   do j = jts,jte
   do k = kts,kte
   do i = its,ite
-    pm25wf_PRMsource(k,i)  = pm25wf_PRMsource_p(i,k,j) !need to be declare in a pool (diag_physics or tend_physics?)
+    pm25wf_PRMsource(k,i)  = pm25wf_PRMsource_p(i,k,j) !need to be declare in the pool tend_physics
   enddo
   enddo
   enddo
@@ -1061,17 +1061,16 @@
  !      call mpas_timer_start('') !set a timer later
         
         call smk_pr_driver( &
-                  ids = ids , ide = ide , jds = jds , jde = jde , kds = kds , kde = kde ,              &
-                  ims = ims , ime = ime , jms = jms , jme = jme , kms = kms , kme = kme ,              &
-                  its = its , ite = ite , jts = jts , jte = jte , kts = kts , kte = kte ,              &
-                  zz  = zz_p, z   = z_p , zmid= zmid_p , dz = dz_p,                                    &
-                  t        = t_p        , th       = th_p,                                             &
-                  u        = u_p        , v        = v_p,                                              &
-                  rho      = rho_p      , pres     = pres_p,                                           & 
-                  qv       = qv_p       ,                                                              &
+                  its = its , ite = ite , jts = jts , jte = jte , kts = kts , kte = kte ,              &               
+                  zz  = zz_p, z   = z_p , zmid= zmid_p,   dz = dz_p,                                   &  
+                  t   = t_p , th  = th_p,                                                              &
+                  u   = u_p , v   = v_p,                                                               &
+                  rho = rho_p      , rho_zz = rho_zz_p,                                                & 
+                  pres= pres_p     ,                                                                   & 
+                  qv  = qv_p       ,                                                                   &
                   ivgtyp              = ivgtyp_p,                                                      &
                   pm25_wild_emis_flux = pm25_wildf_emis_p,                                             &  
-                  pm25wf_PRMsource    = pm25wf_PRMsource_p                                             &
+                  pm25wf_PRMsource    = pm25wf_PRMsource_p                                             &             
                   )
 
  !      call mpas_timer_stop('') !set a timer later

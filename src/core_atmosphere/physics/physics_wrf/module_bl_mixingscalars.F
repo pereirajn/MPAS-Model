@@ -34,7 +34,7 @@ module module_pbl_scalars
       
       !--- local pointers:
       logical,pointer:: config_do_restart
-      integer,pointer:: num_scalars, index_cnvcf, index_pm25wf,index_qv
+      integer,pointer:: num_scalars, index_pm25wf,index_qv
 
       !--- kzh ="vertical diffusion coefficient of potential temperature" 
       !--- units="m^{2} s^{-1}"
@@ -59,7 +59,7 @@ module module_pbl_scalars
       errflg = 0
 
       call mpas_log_write(' ')
-      call mpas_log_write('--- enter subroutine smk_pr_driver:')
+      call mpas_log_write('--- enter subroutine driver_pbl_scalars:')
 
       
       call mpas_pool_get_config(configs,'config_do_restart'  ,config_do_restart  )
@@ -74,11 +74,7 @@ module module_pbl_scalars
          nscalars = nscalars + 1
          index_scalar(nscalars) = index_pm25wf
       endif
-      call mpas_pool_get_dimension(state,'index_cnvcf',index_cnvcf)
-      if(index_cnvcf > 0) then 
-         nscalars = nscalars + 1
-         index_scalar(nscalars) = index_cnvcf
-      endif
+     
       
       !--- if no scalar to be mixed, make a "U-turn" 
       if(nscalars == 0) return 

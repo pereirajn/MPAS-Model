@@ -293,10 +293,6 @@
  type(mpas_pool_type),intent(in):: mesh
 
     
-    real (kind=RKIND), dimension(nVertLevels,nCells+1), intent(in) :: pm25wf_PRMsource
-    !real (kind=RKIND), dimension(nVertLevels,nCells+1), intent(in) :: tend_theta_euler !!from v8.1.0
-
-
  character(len=StrKIND),intent(in):: convection_scheme
  character(len=StrKIND),intent(in):: microp_scheme
  character(len=StrKIND),intent(in):: pbl_scheme
@@ -337,6 +333,10 @@
 
  real(kind=RKIND),intent(in),dimension(nVertLevels,nCells+1):: rthratenlw
  real(kind=RKIND),intent(in),dimension(nVertLevels,nCells+1):: rthratensw
+
+ real (kind=RKIND), intent(in), dimension(nVertLevels,nCells+1) :: pm25wf_PRMsource
+ !real (kind=RKIND), dimension(nVertLevels,nCells+1), intent(in) :: tend_theta_euler !!from v8.1.0
+
 
 !inout arguments:
  real(kind=RKIND),intent(inout),dimension(nVertLevels,nEdges+1):: rublten_Edge

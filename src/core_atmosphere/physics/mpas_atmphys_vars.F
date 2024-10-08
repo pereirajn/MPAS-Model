@@ -195,6 +195,7 @@
     th_p,             &!potential temperature                                                   [K]
     al_p,             &!inverse of air density                                              [m3/kg]
     rho_p,            &!air density                                                         [kg/m3]
+    rho_zz_p,         &!dry air density divided by d(zeta)/dz                               [kg/m3] JNP
     rh_p               !relative humidity                                                       [-]
 
  real(kind=RKIND),dimension(:,:,:),allocatable:: &
@@ -575,7 +576,7 @@
 !... arrays only in Plume Rise Model scheme:
  real(kind=RKIND),dimension(:,:,:),allocatable:: &
      pm25wf_PRMsource_p              !3d pm25 wildfire emissions after PRM calculations                   [kg.m-2.s-1]
- ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09.
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09.
  real(kind=RKIND),dimension(:,:),allocatable:: &
      pm25_wildf_emis_p               !2d pm25 wildfire emissions at surface                     [kg.m-2.s-1]
  

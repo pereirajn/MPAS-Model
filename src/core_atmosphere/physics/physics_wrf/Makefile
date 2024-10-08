@@ -9,6 +9,7 @@ dummy:
 
 OBJS = \
 	libmassv.o                     \
+	plumerise.o					   \
 	module_bl_mixingscalars.o      \
 	module_wildf_plumerise.o       \
 	module_bep_bem_helper.o        \
@@ -61,6 +62,10 @@ physics_wrf_lib:
 	ar -ru ./../libphys.a $(OBJS)
 
 # DEPENDENCIES:
+
+module_wildf_plumerise.o: \
+	plumerise.o 
+
 module_bl_mynn.o: \
 	bl_mynn_post.o \
 	bl_mynn_pre.o

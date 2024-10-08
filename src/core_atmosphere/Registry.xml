@@ -1856,11 +1856,6 @@
                 
                 <!-- tendencies for prognostic variables -->
                 
-                <var name="pm25wf_sources" type="real"
-                     dimensions="nVertLevels nCells Time"
-                     units="kg m^{-2} s^{-1}"
-                     description="pm25 from wildfires areal production rate" />
-
                 <var name="tend_u" name_in_code="u" type="real" dimensions="nVertLevels nEdges Time" units="m s^{-2}"
                      description="Tendency of u from dynamics"/>
 
@@ -1946,7 +1941,7 @@
                              packages="mp_thompson_aers_in"/>
 
                         <var name="tend_pm25wf" name_in_code="pm25wf" array_group="passive" units="kg m^{-3} s^{-1}"
-                             description="Tendency of wildfire pm25 mass per unit volume divided by d(zeta)/dz"/>
+                             description="Tendency of wildfire pm25 mass multiplied by dry air density divided by d(zeta)/dz"/>
 
                 </var_array>
 #endif
@@ -3371,8 +3366,8 @@
                 <!-- ... TENDENCIES FROM PARAMETERIZATION OF PLANETARY BOUNDARY LAYER PROCESSES:                        -->
                 <!-- ================================================================================================== -->
 
-                <var name="pm25wf_PRMsource" type="real" dimensions="nVertLevels nCells Time" units="kg m^{-2} s^{-1}"
-                     description="pm25 wildfire emissions after calculations from PRM"/>
+                <var name="pm25wf_PRMsource" type="real" dimensions="nVertLevels nCells Time" units="kg kg^{-1} s^{-1}"
+                     description="tendency of pm25wf due to plume rise processes "/>
                      
                 <var name="rublten" type="real" dimensions="nVertLevels nCells Time" units="m s^{-1} s^{-1}"
                      description="tendency of zonal wind due to pbl processes"

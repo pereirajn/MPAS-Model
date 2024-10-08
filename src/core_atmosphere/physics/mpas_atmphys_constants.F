@@ -8,7 +8,7 @@
 !=================================================================================================================
  module mpas_atmphys_constants
  use mpas_kind_types
- use mpas_constants, only : pii, cp, gravity, R_d => rgas, rvord
+ use mpas_constants, only : pii, cp, cv, earth_radius=>a, gravity, R_d => rgas, rvord
 
  implicit none
  public
