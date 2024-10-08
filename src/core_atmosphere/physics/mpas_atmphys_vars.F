@@ -570,6 +570,16 @@
     sm3d_p,           &!stability function for moisture                                                        [-]
     elpbl_p            !length scale from PBL                                                                  [m]
 
+
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30.
+!... arrays only in Plume Rise Model scheme:
+ real(kind=RKIND),dimension(:,:,:),allocatable:: &
+     pm25wf_PRMsource_p              !3d pm25 wildfire emissions after PRM calculations                   [kg.m-2.s-1]
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09.
+ real(kind=RKIND),dimension(:,:),allocatable:: &
+     pm25_wildf_emis_p               !2d pm25 wildfire emissions at surface                     [kg.m-2.s-1]
+ 
+
 !=================================================================================================================
 !... variables and arrays related to parameterization of seaice:
 !... the options set for seaice_albedo_opt, seaice_thickness_opt, and seaicesnowdepth_opt must not be changed

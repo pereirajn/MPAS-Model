@@ -244,6 +244,8 @@ module init_atm_cases
             call init_atm_case_gfs(block_ptr, mesh, nCells, nEdges, nVertLevels, fg, state, &
                                    diag, diag_physics, block_ptr % dimensions, block_ptr % configs)
             
+            call init_wildf_tracers(mesh, state)
+            
             if (config_met_interp) then
                call init_atm_thompson_aerosols(block_ptr, mesh, block_ptr % configs, diag, state)
                call physics_initialize_real(mesh, fg, domain % dminfo, block_ptr % dimensions, block_ptr % configs)
@@ -7138,6 +7140,44 @@ call mpas_log_write('Done with soil consistency check')
       ierr = 0
 
    end function read_text_array
+
+!-------- define the init_wildf_tracers function---------------------------!
+
+   subroutine init_wildf_tracers(mesh, state)
+
+    implicit none
+
+    type (mpas_pool_type), intent(in) :: mesh
+    type (mpas_pool_type), intent(inout) :: state
+
+    integer, pointer :: index_pm25wf
+    integer, pointer :: nCells
+    integer, pointer :: nVertLevels
+
+    integer :: k, iCell
+
+    real (kind=RKIND), dimension(:), pointer :: latCell
+    real (kind=RKIND), dimension(:), pointer :: lonCell
+    real (kind=RKIND), dimension(:,:,:), pointer :: scalars
+
+    call mpas_log_write('====== Handling wildfire tracer initialization ======')
+
+    call mpas_pool_get_dimension(mesh, 'nCells', nCells)
+    call mpas_pool_get_dimension(mesh, 'nVertLevels', nVertLevels)
+
+    call mpas_pool_get_dimension(state, 'index_pm25wf', index_pm25wf)
+
+    call mpas_pool_get_array(state, 'scalars', scalars)
+    call mpas_pool_get_array(mesh, 'latCell', latCell)
+    call mpas_pool_get_array(mesh, 'lonCell', lonCell)
+
+    do iCell = 1, nCells
+        do k = 1, nVertLevels
+            scalars(index_pm25wf,k,iCell) = 0.0
+        end do
+    end do
+
+   end subroutine init_wildf_tracers
 
 
 end module init_atm_cases

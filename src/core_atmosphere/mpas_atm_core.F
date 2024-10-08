@@ -298,6 +298,61 @@ module atm_core
    end function atm_core_init
 
 
+   !JNP
+   !-----------------------------------------------------------------------
+   !  routine atm_update_pm25wf_sources
+   !
+   !> \brief Updates time-varying pm25wf sources for the pm25wf scalar
+   !> \obs: Can be used for updates any time-varying sources/sinks for any scalar
+   !> \date  27 August 2024
+   !> \details
+   !>  This routine takes as input the block containing all model fields
+   !>  and allows for the updating of any time-varying source/sink fields
+   !>  associated with scalars.
+   !>
+   !>  Ideally, this routine should be called in every model timestep after
+   !>  any input streams have been read.
+   !
+    subroutine atm_update_pm25wf_sources(block)
+      type (block_type), intent(inout) :: block
+   
+      type (mpas_pool_type), pointer :: tend
+      type (mpas_pool_type), pointer :: diag_physics
+      integer, pointer :: nCells, nVertLevels
+      integer :: iCell, k
+      real (kind=RKIND), dimension(:,:), pointer :: pm25wf_sources
+      real (kind=RKIND), dimension(:), pointer :: pm25_wildf_emis
+
+
+      nullify(tend)
+      call mpas_pool_get_subpool(block % structs, 'tend', tend)
+      nullify(diag_physics)
+      call mpas_pool_get_subpool(block % structs, 'diag_physics', diag_physics)
+      nullify(nCells)
+      call mpas_pool_get_dimension(diag_physics, 'nCells', nCells)
+      nullify(nVertLevels)
+      call mpas_pool_get_dimension(diag_physics, 'nVertLevels', nVertLevels)
+      
+      call mpas_pool_get_array(tend, 'pm25wf_sources', pm25wf_sources)
+      call mpas_pool_get_array(diag_physics, 'pm25_wildf_emis', pm25_wildf_emis)
+
+
+     do iCell=1,nCells
+          do k = 1, 1
+              pm25wf_sources(k,iCell) = 1.0_RKIND * pm25_wildf_emis(iCell)
+          end do
+          do k = 2, nVertLevels
+             pm25wf_sources(k,iCell) = 0.0_RKIND * pm25_wildf_emis(iCell)
+          end do
+      end do
+
+               
+    end subroutine atm_update_pm25wf_sources
+   !-----------------------------------------------------------------------
+   !JNP
+
+
+
    subroutine atm_simulation_clock_init(core_clock, configs, ierr)
 
       use mpas_timekeeping
@@ -397,6 +452,7 @@ module atm_core
       type (mpas_pool_type), pointer :: output_noahmp
 
       integer :: iCell,iEdge,iVertex
+      integer :: k
       
       real (kind=RKIND), dimension(:,:), pointer :: u, uReconstructX, uReconstructY, uReconstructZ, uReconstructZonal, uReconstructMeridional
       real (kind=RKIND), dimension(:), pointer :: meshScalingDel2, meshScalingDel4
@@ -418,7 +474,7 @@ module atm_core
 
 
       logical, pointer :: config_do_restart, config_do_DAcycling
-
+    
       call atm_compute_signs(mesh)
    
       call mpas_pool_get_subpool(block % structs, 'diag', diag)
@@ -583,6 +639,8 @@ module atm_core
                           realArgs=(/minval(meshScalingDel2(1:nEdgesSolve)), maxval(meshScalingDel2(1:nEdgesSolve))/))
       call mpas_log_write('min/max of meshScalingDel4 = $r $r', &
                           realArgs=(/minval(meshScalingDel4(1:nEdgesSolve)), maxval(meshScalingDel4(1:nEdgesSolve))/))
+
+           
 
    end subroutine atm_mpas_init_block
    
@@ -781,6 +839,13 @@ module atm_core
                end if
             end if
          end do
+
+
+         !JNP
+         ! After any input streams have been read, update sources/sinks
+         !
+         call atm_update_pm25wf_sources(domain % blocklist)
+
 
          call mpas_timer_start("time integration")
          call mpas_dmpar_get_time(integ_start_time)

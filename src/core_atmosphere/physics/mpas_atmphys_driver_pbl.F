@@ -18,6 +18,9 @@
  use module_bl_mynn,only: mynn_bl_driver
  use module_bl_ysu
 
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-06. 
+ use module_wildf_plumerise !to access the subroutine smk_pr_driver
+
  implicit none
  private
  public:: allocate_pbl,   &
@@ -92,7 +95,7 @@
 
 !local pointers:
  character(len=StrKIND),pointer:: pbl_scheme
-
+ 
 !-----------------------------------------------------------------------------------------------------------------
 
  call mpas_pool_get_config(configs,'config_pbl_scheme',pbl_scheme)
@@ -189,6 +192,22 @@
     case default
 
  end select pbl_select
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30. 
+ !*Allocate local array to receive emissions after PRM calculations (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j), nvertleves(k)))
+ call mpas_log_write('--- allocate pm25wf_PRMsource_p')
+ if(.not.allocated(pm25wf_PRMsource_p)  ) allocate(pm25wf_PRMsource_p(ims:ime,kms:kme,jms:jme)  )
+ 
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09. 
+ !*Allocate local array to receive emissions fluxes at surface from FINN (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j)))
+ call mpas_log_write('--- allocate pm25_wildf_emis_p')
+ if(.not.allocated(pm25_wildf_emis_p)  ) allocate(pm25_wildf_emis_p(ims:ime,jms:jme)  )
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09. 
+ !*Allocate local array to receive vegetation type 
+ call mpas_log_write('--- allocate ivgtyp_p')
+ if(.not.allocated(ivgtyp_p)  ) allocate(ivgtyp_p(ims:ime,jms:jme)  )
 
  end subroutine allocate_pbl
 
@@ -300,6 +319,22 @@
 
  end select pbl_select
 
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30.
+ !*Deallocate local array that received emissions after PRM calculations (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j), nvertleves(k)))
+ call mpas_log_write('--- deallocate pm25wf_PRMsource_p')
+ if(allocated(pm25wf_PRMsource_p)  ) deallocate(pm25wf_PRMsource_p  )
+
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09. 
+ !*Deallocate local array that received emissions fluxes at surface from FINN (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j)))
+ call mpas_log_write('--- deallocate pm25_wildf_emis_p')
+ if(allocated(pm25_wildf_emis_p)  ) deallocate(pm25_wildf_emis_p  )
+
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09. 
+ !*Dellocate local array that received vegetation type 
+ call mpas_log_write('--- deallocate ivgtyp_p')
+ if(allocated(ivgtyp_p)  ) deallocate(ivgtyp_p  )
+
  end subroutine deallocate_pbl
 
 !=================================================================================================================
@@ -337,6 +372,12 @@
  real(kind=RKIND),dimension(:,:),pointer:: cldfrac_bl,qc_bl,qi_bl
  real(kind=RKIND),dimension(:,:),pointer:: edmf_a,edmf_ent,edmf_qc,edmf_qt,edmf_thl,edmf_w
  real(kind=RKIND),dimension(:,:),pointer:: sub_thl,sub_qv,det_thl,det_qv
+
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09. 
+!local pointers for Smoke Plume Rise scheme:
+ real(kind=RKIND),dimension(:),pointer:: pm25_wildf_emis
+ integer,dimension(:),pointer:: ivgtyp
+
 
 !-----------------------------------------------------------------------------------------------------------------
 
@@ -526,6 +567,35 @@
  enddo
  enddo
 
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30.
+ ! Setup to zero the local array that will receive emissions after PRM calculations (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j), nvertleves(k)))
+  do j = jts,jte
+  do k = kts,kte
+  do i = its,ite
+    pm25wf_PRMsource_p(i,k,j)  = 0._RKIND
+  enddo
+  enddo
+  enddo
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09.
+ ! Add the values of the array pm25_wildf_emis to the local array pm25_wildf_emis_p, so MPAS can see it
+  call mpas_pool_get_array(diag_physics,'pm25_wildf_emis' ,pm25_wildf_emis )
+  do j = jts,jte
+  do i = its,ite
+    pm25_wildf_emis_p(i,j)   = pm25_wildf_emis(i)
+  enddo
+  enddo
+
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-09.
+ ! Add the values of the array ivgtyp to the local array ivgtyp_p, so MPAS can see it
+  call mpas_pool_get_array(sfc_input,'ivgtyp' ,ivgtyp)
+  do j = jts,jte
+  do i = its,ite
+    ivgtyp_p(i,j)   = ivgtyp(i)
+  enddo
+  enddo
+
  end subroutine pbl_from_MPAS
 
 !=================================================================================================================
@@ -564,6 +634,11 @@
  real(kind=RKIND),dimension(:,:),pointer:: cldfrac_bl,qc_bl,qi_bl
  real(kind=RKIND),dimension(:,:),pointer:: edmf_a,edmf_ent,edmf_qc,edmf_qt,edmf_thl,edmf_w
  real(kind=RKIND),dimension(:,:),pointer:: sub_thl,sub_qv,det_thl,det_qv
+
+! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30.
+!local variables for PRM calculations:
+ real(kind=RKIND), dimension(:,:), pointer:: pm25wf_PRMsource 
+
 
 !-----------------------------------------------------------------------------------------------------------------
 
@@ -720,6 +795,18 @@
     case default
 
  end select pbl_select
+
+ 
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-08-30.
+ ! Copy the local array that received emissions after PRM calculations to MPAS-A (PM25 emissions[kg.m-2.s-1], dim=(nCells(i,j), nvertleves(k)))
+  call mpas_pool_get_array(tend_physics,'pm25wf_PRMsource', pm25wf_PRMsource )
+  do j = jts,jte
+  do k = kts,kte
+  do i = its,ite
+    pm25wf_PRMsource(k,i)  = pm25wf_PRMsource_p(i,k,j) !need to be declare in a pool (diag_physics or tend_physics?)
+  enddo
+  enddo
+  enddo
 
  end subroutine pbl_to_MPAS
  
@@ -964,6 +1051,34 @@
     case default
 
  end select pbl_select
+
+
+
+ ! Jaqueline N. Pereira (jaqueline.pereira@inpe.br) / 2024-09-06.
+ ! this code calls subroutine smk_pr_driver in the module_wildf_plumerise 
+ call mpas_log_write(' ')
+ call mpas_log_write('--- enter module module_wildf_plumerise:')
+ !      call mpas_timer_start('') !set a timer later
+        
+        call smk_pr_driver( &
+                  ids = ids , ide = ide , jds = jds , jde = jde , kds = kds , kde = kde ,              &
+                  ims = ims , ime = ime , jms = jms , jme = jme , kms = kms , kme = kme ,              &
+                  its = its , ite = ite , jts = jts , jte = jte , kts = kts , kte = kte ,              &
+                  zz  = zz_p, z   = z_p , zmid= zmid_p , dz = dz_p,                                    &
+                  t        = t_p        , th       = th_p,                                             &
+                  u        = u_p        , v        = v_p,                                              &
+                  rho      = rho_p      , pres     = pres_p,                                           & 
+                  qv       = qv_p       ,                                                              &
+                  ivgtyp              = ivgtyp_p,                                                      &
+                  pm25_wild_emis_flux = pm25_wildf_emis_p,                                             &  
+                  pm25wf_PRMsource    = pm25wf_PRMsource_p                                             &
+                  )
+
+ !      call mpas_timer_stop('') !set a timer later
+ call mpas_log_write(' ')
+ call mpas_log_write('--- exit module module_wildf_plumerise')
+ call mpas_log_write(' ')
+
 
 !copy local arrays to MPAS grid:
  call pbl_to_MPAS(configs,diag_physics,tend_physics,its,ite)

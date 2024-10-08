@@ -1033,6 +1033,10 @@
                         <var name="nwfa" array_group="number" units="nb kg^{-1}"
                              description="Gocart water-friendly aerosol number concentration"
                              packages="mp_thompson_aers_in"/>
+
+                        <var name="pm25wf" array_group="passive" units="kg kg^{-1}"
+                             description="pm25 wildfire mixing ratio"/>     
+
                 </var_array>
 
                 <!-- Climatology for ocean mixed-layer depth -->

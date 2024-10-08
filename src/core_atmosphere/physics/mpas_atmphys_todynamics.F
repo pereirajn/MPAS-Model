@@ -90,8 +90,13 @@
                                   radt_sw_scheme
 
  integer:: i,iCell,k,n
+
  integer,pointer:: index_qv,index_qc,index_qr,index_qi,index_qs
  integer,pointer:: index_nc,index_ni,index_nifa,index_nwfa
+
+ integer,pointer:: index_pm25wf
+ !integer,pointer:: index_qg !JNP from v8.1.0
+
  integer,pointer:: nCells,nCellsSolve,nEdges,nEdgesSolve
 
  real(kind=RKIND),dimension(:,:),pointer:: mass          ! time level 2 rho_zz
@@ -107,14 +112,20 @@
                                            rucuten,rvcuten
  real(kind=RKIND),dimension(:,:),pointer:: rthratenlw,rthratensw                                    
  
+ real(kind=RKIND),dimension(:,:),pointer:: pm25wf_PRMsource
+
  real(kind=RKIND),dimension(:,:),pointer:: tend_u_phys !nick
  real(kind=RKIND),dimension(:,:,:),pointer:: tend_scalars
 
  real(kind=RKIND),dimension(:,:),pointer:: rublten_Edge,rucuten_Edge
 
+
  real(kind=RKIND),dimension(:,:),allocatable:: tend_th
 
-!=================================================================================================================
+ !real(kind=RKIND),dimension(:,:),allocatable:: theta !JNP from v8.1.0
+ !=================================================================================================================
+ 
+
 
  call mpas_pool_get_dimension(mesh,'nCells',nCells)
  call mpas_pool_get_dimension(mesh,'nEdges',nEdges)
@@ -143,6 +154,10 @@
  call mpas_pool_get_dimension(state,'index_nifa',index_nifa)
  call mpas_pool_get_dimension(state,'index_nwfa',index_nwfa)
 
+! call mpas_pool_get_dimension(state, 'index_qg', index_qg) !JNP from v8.1.0
+ call mpas_pool_get_dimension(state, 'index_pm25wf', index_pm25wf)
+
+
  call mpas_pool_get_array(tend_physics,'rublten',rublten)
  call mpas_pool_get_array(tend_physics,'rvblten',rvblten)
  call mpas_pool_get_array(tend_physics,'rthblten',rthblten)
@@ -170,6 +185,13 @@
  call mpas_pool_get_array(tend_physics,'rthratensw',rthratensw)
 
  call mpas_pool_get_array(tend,'scalars_tend',tend_scalars)
+
+
+ call mpas_pool_get_array(tend_physics, 'pm25wf_PRMsource', pm25wf_PRMsource)
+
+ ! call mpas_pool_get_array(tend,'u'           , tend_u         ) !from v8.1.0
+ ! call mpas_pool_get_array(tend,'theta_m'     , tend_theta     ) !from v8.1.0
+ ! call mpas_pool_get_array(tend,'theta_euler' ,tend_theta_euler) !from v8.1.0
 
 
 !initialize the tendency for the potential temperature and all scalars due to PBL, convection,
@@ -211,6 +233,7 @@
               pbl_scheme,convection_scheme,microp_scheme,radt_lw_scheme,radt_sw_scheme,  &
               index_qv,index_qc,index_qr,index_qi,index_qs,                              &
               index_nc,index_ni,index_nifa,index_nwfa,                                   &
+              index_pm25wf, pm25wf_PRMsource,                                            & 
               mass,mass_edge,theta_m,scalars,                                            &
               rublten,rvblten,rthblten,rqvblten,rqcblten,rqiblten,rqsblten,              &
               rncblten,rniblten,rnifablten,rnwfablten,                                   &
@@ -241,6 +264,7 @@
  if(size(rnifablten) == 0) deallocate(rnifablten)
  if(size(rnwfablten) == 0) deallocate(rnwfablten)
 
+
  deallocate(tend_th)
 
  end subroutine physics_get_tend
@@ -251,6 +275,7 @@
                     pbl_scheme,convection_scheme,microp_scheme,radt_lw_scheme,radt_sw_scheme,  &
                     index_qv,index_qc,index_qr,index_qi,index_qs,                              &
                     index_nc,index_ni,index_nifa,index_nwfa,                                   &
+                    index_pm25wf, pm25wf_PRMsource,                                            & 
                     mass,mass_edge,theta_m,scalars,                                            &
                     rublten,rvblten,rthblten,rqvblten,rqcblten,rqiblten,rqsblten,              &
                     rncblten,rniblten,rnifablten,rnwfablten,                                   &
@@ -260,11 +285,17 @@
                     exchange_halo_group)
 !=================================================================================================================
 
+
 !input arguments:
  procedure(halo_exchange_routine):: exchange_halo_group
 
  type(block_type),intent(in)    :: block
  type(mpas_pool_type),intent(in):: mesh
+
+    
+    real (kind=RKIND), dimension(nVertLevels,nCells+1), intent(in) :: pm25wf_PRMsource
+    !real (kind=RKIND), dimension(nVertLevels,nCells+1), intent(in) :: tend_theta_euler !!from v8.1.0
+
 
  character(len=StrKIND),intent(in):: convection_scheme
  character(len=StrKIND),intent(in):: microp_scheme
@@ -276,6 +307,7 @@
  integer,intent(in):: rk_step,dynamics_substep
  integer,intent(in):: index_qv,index_qc,index_qr,index_qi,index_qs
  integer,intent(in):: index_nc,index_ni,index_nifa,index_nwfa
+ integer, intent(in) :: index_pm25wf
 
  real(kind=RKIND),intent(in),dimension(nVertLevels,nCells+1):: mass
  real(kind=RKIND),intent(in),dimension(nVertLevels,nEdges+1):: mass_edge
@@ -316,6 +348,7 @@
  real(kind=RKIND),intent(inout),dimension(nVertLevels,nCells+1):: tend_theta
 
  real(kind=RKIND),intent(inout),dimension(num_scalars,nVertLevels,nCells+1):: tend_scalars
+
 
 !local variables:
  integer:: i,k
@@ -368,6 +401,15 @@
 
        case default
     end select pbl_select
+ 
+    do i = 1, nCellsSolve
+       do k = 1, nVertLevels
+          tend_scalars(index_pm25wf,k,i) = tend_scalars(index_pm25wf,k,i) + pm25wf_PRMsource(k,i)*mass(k,i) !mass=rho_zz
+       enddo
+    enddo
+ 
+ 
+ 
  endif
 
 

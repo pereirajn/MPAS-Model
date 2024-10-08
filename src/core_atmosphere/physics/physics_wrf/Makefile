@@ -9,6 +9,8 @@ dummy:
 
 OBJS = \
 	libmassv.o                     \
+	module_bl_mixingscalars.o      \
+	module_wildf_plumerise.o       \
 	module_bep_bem_helper.o        \
 	module_bl_gwdo.o               \
 	module_bl_mynn.o               \

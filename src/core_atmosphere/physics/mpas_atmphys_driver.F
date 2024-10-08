@@ -24,7 +24,10 @@
  use mpas_atmphys_constants
  use mpas_atmphys_interface
  use mpas_atmphys_update
- use mpas_atmphys_vars, only: l_camlw,l_conv,l_radtlw,l_radtsw
+ !JNP Sep19
+ use mpas_atmphys_vars, only: l_camlw,l_conv,l_radtlw,l_radtsw, kts, kte, dt_pbl
+ use module_pbl_scalars, only: driver_pbl_scalars
+ !
  use mpas_timer
 
  implicit none
@@ -313,6 +316,11 @@
        do thread=1,nThreads
           call driver_pbl(itimestep,block%configs,mesh,sfc_input,diag_physics,tend_physics, &
                           cellSolveThreadStart(thread),cellSolveThreadEnd(thread))
+       
+       !JNP Sep19
+          call driver_pbl_scalars(itimestep,diag_physics,block%configs,state,mesh,time_lev, &
+                          cellSolveThreadStart(thread),cellSolveThreadEnd(thread),kts,kte,dt_pbl)
+       !
        end do
 !$OMP END PARALLEL DO
        call deallocate_pbl(block%configs)
