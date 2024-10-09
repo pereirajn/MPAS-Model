@@ -104,9 +104,9 @@
    call mpas_log_write('--- enter subroutine smk_pr_driver:')
 
    call mpas_log_write('kte=$i', intArgs=(/kte/))
-   call mpas_log_write('qv=$r', realArgs=(/qv/))
-   call mpas_log_write('t=$r', realArgs=(/t/))
-   call mpas_log_write('z=$r', realArgs=(/z/))
+   call mpas_log_write('qv(its+30,kts+20,jte)=$r', realArgs=(/qv(its+30,kts+20,jte)/))
+   call mpas_log_write('t(its+30,kts+20,jte)=$r', realArgs=(/t(its+30,kts+20,jte)/))
+   call mpas_log_write('z(its+30,kts+20,jte)=$r', realArgs=(/z(its+30,kts+20,jte)/))
    
 
 
@@ -125,12 +125,13 @@
                iveg_ag(i,j) = 3 !Cerrado/woody savanna  !igbp = Shrublands, savannas, Permanent wetlands(pantanal)?
             case(10,12,14)
                iveg_ag(i,j) = 4 !Grassland/cropland     !igbp = grassland, cropland, natural cropland
-            !case default
-            !   flame_fraction = 0.0  ! Default value if not in the range
+            case default
+               iveg_ag(i,j) = 0  ! Default value if not in the range
             end select
          enddo
       enddo
 
+      call mpas_log_write('ivgtyp(its+30,jte)=$i', intArgs=(/ivgtyp(its+30,jte)/))
 
 
    !Need to be inside the loop i,j ?

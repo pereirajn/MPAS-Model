@@ -12,7 +12,7 @@ implicit none
  ! Global configurations
 
      logical :: do_windeffect = .true.   !- turn ON (true), OFF (false) the env wind effect on plume rise
-     integer :: sound_type = 0           !- set 1 for reading a precreated sound already defined at PRM vertical grid
+     integer :: sound_type = 0           !- set it to zero for the coupling with 3d host model. set 1 for reading a precreated sound already defined at PRM vertical grid
      integer, parameter :: heat_flag = 1 !- set 1 for use prescribed heat flux values. set 2 to use heat flux from FRP
 
 
@@ -146,7 +146,7 @@ implicit none
        maxtime    ! set in in get_fire_properties
   real(kind=kind_phys) :: ztop_(ntime) !
  
-  integer, intent(in) :: &
+  integer :: &
        kmt,     & ! will be set to nkp in the subroutine get_env_condition
        imm        ! counter for lower and upper boundary of the heat flux and for the plume
  !=================================================================================================================
@@ -195,7 +195,7 @@ implicit none
 
 
     integer, dimension( its:ite, jts:jte ),  intent(in   )   :: &
-       iveg_ag   
+       iveg_ag_in   
 
 
    !---------------------------------------------------------------
@@ -218,9 +218,9 @@ implicit none
         prcon(:),  & ! pressure
         rvcon(:)     ! water vapor mixing ratio (kg h20v/kg dry air)
 
-    integer, pointer :: iveg
+    integer, pointer :: iveg_ag
 
-     real(kind=kind_phys), intent(in) :: &
+     real(kind=kind_phys) :: &
          & heat_flux_min, & ! minimal heat flux 
          & heat_flux_max, & ! maximum heat flux 
          & burnt_area       ! burnt area, fire size (m2)
@@ -232,10 +232,10 @@ implicit none
     call mpas_log_write(' ')
     call mpas_log_write('--- enter subroutine plumerise_run:')
     call mpas_log_write('kte=$i', intArgs=(/kte/))
-    call mpas_log_write('qv_in=$r', realArgs=(/qv_in/))
-    call mpas_log_write('temp_in=$r', realArgs=(/temp_in/))
-    call mpas_log_write('z_in=$r', realArgs=(/z_in/))
-    
+    call mpas_log_write('qv_in(its+30,kts+20,jte)=$r', realArgs=(/qv_in(its+30,kts+20,jte)/))
+    call mpas_log_write('temp_in(its+30,kts+20,jte)=$r', realArgs=(/temp_in(its+30,kts+20,jte)/))
+    call mpas_log_write('z_in(its+30,kts+20,jte)=$r', realArgs=(/z_in(its+30,kts+20,jte)/))
+    call mpas_log_write('iveg_ag_in(its+30,jte)=$i', intArgs=(/iveg_ag_in(its+30,jte)/))
         
     !-allocate the local arrays to MPAS atmospheric conditions at 1D
     allocate(ucon(kte)  )
@@ -244,7 +244,7 @@ implicit none
     allocate(tmpcon(kte)  )
     allocate(prcon(kte)  )
     allocate(rvcon(kte)  )
-    allocate(iveg)
+    allocate(iveg_ag)
 
     !Define local index of the MPAS upper most layer
     m1=kte 
@@ -253,69 +253,74 @@ implicit none
     !-initialize several parameters (only need to be done at the 1st time)
     call zero_plumegen_coms(ucon,zcon,vcon,tmpcon,prcon,rvcon)
 
-    !---------------------------------------------------------------
-    ! read variables of host model  
-    !---------------------------------------------------------------
-       
+    
+   !********************************************************************************
+   ! Loop on host model and vegetation type
+   !********************************************************************************
+    
+    do j = jts,jte
+    do i = its, ite
+          !---------------------------------------------------------------
+          ! read variables of host model  
+          !---------------------------------------------------------------
           
-       !- fill local variables with the host model variables (MPAS grid)
-       
-        do j = jts,jte
-        do i = its, ite
-        do k = kts,m1                                   ! z-direction of the host model 
-          rvcon (k) = qv_in(i,k,j)                      ! fill with the water vapor mixing ratio (kg/kg) of the host model 
-          zcon  (k) = hml_in(i,k,j) - z_in(i,kts,j)     ! fill with the cartesian height (meters) of the termodynamic grid point  
+           call mpas_log_write('*read variables of host model:')
+
+           !- fill local variables with the host model variables (MPAS grid)
+            do k = kts,m1                                     ! z-direction of the host model 
+               rvcon (k) = qv_in(i,k,j)                      ! fill with the water vapor mixing ratio (kg/kg) of the host model 
+               zcon  (k) = hml_in(i,k,j) - z_in(i,kts,j)     ! fill with the cartesian height (meters) of the termodynamic grid point  
                                                         !(half-levels) above local surface--> muss full level sein, siehe aufruf htint
-          tmpcon(k) = temp_in(i,k,j)                    !
-          prcon (k) = pres_in(i,k,j)                    !
-          ucon  (k) = u_in(i,k,j)                       !fill with the zonal wind (m/s) of the host model
-          vcon  (k) = v_in(i,k,j)                       !fill with the meridional wind (m/s) of the host model
-        enddo
-        enddo
-        enddo
-      
-       
-        call mpas_log_write('*read variables of host model:')
-        call mpas_log_write(' qv_in(ite,kte,jte)=$r rvcon (kte)=$r', realArgs=(/qv_in(ite,kte,jte),rvcon(kte)/))
-        call mpas_log_write(' temp_in(ite,kte,jte)=$r tmpcon(kte)=$r', realArgs=(/temp_in(ite,kte,jte),tmpcon(kte)/))
-        call mpas_log_write(' hml_in(ite,kte,jte)=$r z_in(ite,kts,jte)=$r zcon(kte)=$r ', realArgs=(/hml_in(ite,kte,jte), z_in(ite,kts,jte), zcon(kte)/))
-
+               tmpcon(k) = temp_in(i,k,j)                    !
+               prcon (k) = pres_in(i,k,j)                    !
+               ucon  (k) = u_in(i,k,j)                       !fill with the zonal wind (m/s) of the host model
+               vcon  (k) = v_in(i,k,j)                       !fill with the meridional wind (m/s) of the host model
+            enddo
+        
+           !- fill with the vegetation type combinated in the module_wildf_plumerise
+           iveg_ag = iveg_ag_in(i,j)  
 
           
-        do j = jts,jte
-        do i = its, ite
-          iveg_ag = iveg_ag_in(i,j)  !fill with the vegetation type combinated for the PRM 
-        enddo
-        enddo
+          !------------------------------------------------------------------------------
+          ! get envinronmental state in the PRM grid (temp, water vapor mix ratio, ...)  
+          !----------------------------------------------------------------------------
+           
+           call get_env_condition(kte,kmt,ucon,zcon,vcon,tmpcon,prcon,rvcon)
 
 
-
-    !********************************************************************************
-    ! get envinronmental state in the PRM grid (temp, water vapor mix ratio, ...) 
-    !********************************************************************************
-    call get_env_condition(kte,kmt,ucon,zcon,vcon,tmpcon,prcon,rvcon)
-
-
-    !********************************************************************************
-    ! get fire properties (burned area, plume radius, heating rates ...)
-    !********************************************************************************
-
-     burnt_area=50.*1e4 !(m^2)
-
-     do iveg_ag = 1, nveg_ag !loop on vegetation type
-          do imm=1,2         !loop on heat_flux min and max
-
-               !essa condicao esta no modelo plumerise_origin e nao esta no plume_alone_module, devo manter?
-               !if (burnt_area .gt. 1e-6) then 
-               !  imm=1  !  min power allowed. Will use only the minimum heat flux
-
-               call mpas_log_write('iveg_ag=$i', intArgs=(/iveg_ag/))
-               call mpas_log_write('imm=$i', intArgs=(/imm/))
-               
-               call get_fire_properties(burnt_area,heat_flux_max,heat_flux_min,iveg_ag, imm)
+          !--------------------------------------------------------------------------------
+          do iveg_ag = 1, nveg_ag !loop on vegetation type
           
-          enddo !end loop on imm (heat_flux min and max)
-     enddo !end loop on vegetation type
+           burnt_area=50.*1e4 !(m^2)
+           
+              do imm=1,2         !loop on heat_flux min and max
+          
+               !------------------------------------------------------------------------------
+               ! get fire properties (burned area, plume radius, heating rates ...)  
+               !----------------------------------------------------------------------------
+                     
+                !essa condicao esta no modelo plumerise_origin e nao esta no plume_alone_module, devo manter?
+                !if (burnt_area .gt. 1e-6) then 
+                !  imm=1  !  min power allowed. Will use only the minimum heat flux
+                call get_fire_properties(burnt_area,heat_flux_max,heat_flux_min,iveg_ag, imm)
+              
+     
+               !------------------------------------------------------------------------------
+               ! generate plume rise 
+               !----------------------------------------------------------------------------
+
+
+              enddo !end loop on imm (heat_flux min and max)
+          
+          enddo !end loop on vegetation type
+     enddo !end loop on i
+     enddo !end loop on j 
+
+     call mpas_log_write(' qv_in(its+30,kts+20,jte)=$r rvcon (kts+20)=$r', realArgs=(/qv_in(its+30,kts+20,jte),rvcon(kts+20)/))
+     call mpas_log_write(' temp_in(its+30,kts+20,jte)=$r tmpcon(kts+20)=$r', realArgs=(/temp_in(its+30,kts+20,jte),tmpcon(kts+20)/))
+     call mpas_log_write(' hml_in(its+30,kts+20,jte)=$r z_in(its+30,kts+20,jte)=$r zcon(kts+20)=$r ', realArgs=(/hml_in(its+30,kts+20,jte), z_in(its+30,kts+20,jte), zcon(kts+20)/))
+     call mpas_log_write('iveg_ag_in(its+30,jte)=$i iveg_ag=$i ', intArgs=(/iveg_ag_in(its+30,jte), iveg_ag/))
+
 
 
    !********************************************************************************
@@ -504,8 +509,8 @@ subroutine set_grid()
     !   dzm(2:mzp) = 1./dz
 
 
+   call mpas_log_write('zsurf=$r', realArgs=(/zsurf/))  
    do k=1,mzp
-     call mpas_log_write('zsurf=$r', realArgs=(/zsurf/))
      call mpas_log_write('zt(k)=$r', realArgs=(/zt(k)/))
    end do
 
@@ -611,13 +616,15 @@ subroutine get_fire_properties(burnt_area,heat_flux_max,heat_flux_min,iveg_ag, i
            3.3,   3.3    /! iveg_ag=4:Grassland/cropland      ! igbp 10, 12, 14
          !--------------------------------------------------------------------
 
+   call mpas_log_write('    --- enter subroutine get_fire_properties:')
+
    !*******************************************************************************
    ! Fire data inputs
    !*******************************************************************************
 
     !-- fire at the surface
     area = burnt_area   ! area of burn, m^2
-    call mpas_log_write('area of burn (m2)=$r', realArgs=(/area/))
+    
 
     !-- heat flux for the vegetation type
     if ( heat_flag == 1) then
@@ -629,7 +636,10 @@ subroutine get_fire_properties(burnt_area,heat_flux_max,heat_flux_min,iveg_ag, i
          !heat_fluxW = beta*(FRP/area)/0.55 ! in W/m^2
     endif
 
-     call mpas_log_write('heat_fluxW (W/m2)=$r', realArgs=(/heat_fluxW/))
+     !call mpas_log_write('area of burn (m2)=$r', realArgs=(/area/))
+     !call mpas_log_write('imm=$i', intArgs=(/imm/))
+     !call mpas_log_write('iveg_ag=$i', intArgs=(/iveg_ag/))
+     !call mpas_log_write('heat_fluxW (W/m2)=$r', realArgs=(/heat_fluxW/))
 
 end subroutine get_fire_properties
 !=================================================================================================================
