@@ -1,6 +1,7 @@
 !==================================================================================================================
  module module_wildf_plumerise
  use mpas_log
+ use mpas_derived_types !for messageType=MPAS_LOG_ERR
  use mpas_kind_types,only: kind_phys => RKIND
 
  use plumerise, only: plumerise_run
@@ -24,15 +25,11 @@
                             pm25_wild_emis_flux,                                         &
                             pm25wf_PRMsource                                             &
                             )
+  
 
-
-
-
-   
-
-   !-------------------------------------------------------------------------------
+   !*******************************************************************************
     implicit none
-   !-------------------------------------------------------------------------------
+   !*******************************************************************************
 
    !-------------------------------------------------------------------------------
    ! Variables and arrays from mpas_atmphys_driver_pbl
@@ -79,41 +76,33 @@
              intent(out   )   ::                                  pm25wf_PRMsource
 
 
-
-
-!-------------------------------------------------------------------------------
-! Local Variables and Arrays to/from plumerise_run
-!-------------------------------------------------------------------------------
+   !-------------------------------------------------------------------------------
+   ! Local Variables and Arrays to/from plumerise_run
+   !-------------------------------------------------------------------------------
     
     real(kind=kind_phys):: &
        zbot_out,               & !
        ztop_out                  !
 
-   integer, dimension( its:ite, jts:jte ) :: iveg_ag   
+    integer, dimension( its:ite, jts:jte ) :: iveg_ag   
 
-!-------------------------------------------------------------------------------
-! Local Variables and Arrays 
-!-------------------------------------------------------------------------------
+   !-------------------------------------------------------------------------------
+   ! Local Variables and Arrays 
+   !-------------------------------------------------------------------------------
     integer ::  i,j,k
     real(kind=kind_phys) :: flame_fraction
     
-
-!=================================================================================================================
-  
+   
    call mpas_log_write(' ')
    call mpas_log_write('--- enter subroutine smk_pr_driver:')
+    
 
-   call mpas_log_write('kte=$i', intArgs=(/kte/))
-   call mpas_log_write('qv(its+30,kts+20,jte)=$r', realArgs=(/qv(its+30,kts+20,jte)/))
-   call mpas_log_write('t(its+30,kts+20,jte)=$r', realArgs=(/t(its+30,kts+20,jte)/))
-   call mpas_log_write('z(its+30,kts+20,jte)=$r', realArgs=(/z(its+30,kts+20,jte)/))
-   
-
-
-   !-------------------------------------------------------------------------------
+   !*******************************************************************************
    ! Determines the vegetation combination from MPAS to PRM categories
-   !-------------------------------------------------------------------------------
-  
+   !*******************************************************************************
+     
+     !call mpas_log_write('--- vegetation category combination', messageType=MPAS_LOG_ERR)
+     
      do j = jts,jte
          do i = its, ite
             select case(ivgtyp(i, j))
@@ -128,32 +117,38 @@
             case default
                iveg_ag(i,j) = 0  ! Default value if not in the range
             end select
+
+            !call mpas_log_write('ivgtyp(i,j)=$i iveg_ag(i,j)=$i', intArgs=(/ivgtyp(i,j), iveg_ag(i,j)/), messageType=MPAS_LOG_ERR)
+
          enddo
       enddo
 
-      call mpas_log_write('ivgtyp(its+30,jte)=$i', intArgs=(/ivgtyp(its+30,jte)/))
 
+   !*******************************************************************************
+   ! Call subroutine plumerise_run in the plumerise.F
+   !*******************************************************************************
+    
+   !call mpas_log_write('kte=$i', intArgs=(/kte/))
+   !call mpas_log_write('qv(its+300,kts+20,jte)=$r', realArgs=(/qv(its+300,kts+20,jte)/))
+   !call mpas_log_write('t(its+300,kts+20,jte)=$r', realArgs=(/t(its+300,kts+20,jte)/))
+   !call mpas_log_write('z(its+300,kts+20,jte)=$r', realArgs=(/z(its+300,kts+20,jte)/))
+   
 
-   !Need to be inside the loop i,j ?
    call plumerise_run( &
-         its = its, ite = ite, jts = jts, jte = jte, kts = kts, kte = kte,                 &
+         its = its, ite = ite, jts = jts, jte = jte, kts = kts, kte = kte                , &
          temp_in       = t         , pres_in       = pres      , u_in       = u          , &
          v_in          = v         , hml_in        = zmid      , qv_in      = qv         , &
          z_in          = z                                                               , &  
          zbot_out      = zbot_out  , ztop_out      = ztop_out                            , & 
-         iveg_ag_in    = iveg_ag                                                           & 
+         iveg_ag_in    = iveg_ag                                                         , & 
+         pm25_wild_emis_flux_in = pm25_wild_emis_flux                                      &  
          )
 
-   
-!=================================================================================================================
 
 
-
-
-
-
-!------------------------------- !test routine! ----------------------------------------------------------
-
+   !******************************************************************************* 
+   ! test routine
+   !*******************************************************************************
 
 
    !-----------------------------------------------------------------------------------------------
@@ -207,7 +202,7 @@
    call mpas_log_write(' ')
 
    end subroutine smk_pr_driver
-!----------------------------------------------------------------------------------------------------------
+!=================================================================================================================
 
 
 
